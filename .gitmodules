@@ -1,0 +1,9 @@
+[submodule "libITS"]
+	path = libITS
+	url = https://github.com/lip6/libITS
+[submodule "llvm-project"]
+	path = llvm-project
+	url = https://github.com/llvm/llvm-project
+[submodule "libDDD"]
+	path = libDDD
+	url = https://github.com/lip6/libDDD
