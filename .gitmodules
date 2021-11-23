@@ -7,3 +7,6 @@
 [submodule "libDDD"]
 	path = libDDD
 	url = https://github.com/lip6/libDDD
+[submodule "ITS-LTL"]
+	path = ITS-LTL
+	url = git@github.com:lip6/ITS-LTL.git
