@@ -1,0 +1,12 @@
+*
+!*.*
+!*/
+*.o
+*.so
+*.lo
+*.la
+*.swp
+CMake*
+*.cmake
+!CMakeLists.txt
+
