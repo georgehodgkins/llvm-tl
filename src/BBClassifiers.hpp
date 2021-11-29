@@ -2,10 +2,12 @@
 #include <llvm/IR/BasicBlock.h>
 #include <llvm/IR/InstVisitor.h>
 #include <llvm/IR/InstrTypes.h>
+#include <llvm/ADT/StringRef.h>
 
 namespace llvm {
 
-class BoolCallbackVisitor : public InstVisitor<BoolCallbackVisitor> {
+// this used to be an instvisitor, but that breaks const-propagation
+class BoolCallbackVisitor {
 	private:
 	bool sat;
 	const bool all;
@@ -23,22 +25,24 @@ class BoolCallbackVisitor : public InstVisitor<BoolCallbackVisitor> {
 
 	void reset () { sat = (all) ? true : false; }
 	
-	void visitInstruction (Instruction& I) {
-		if (!all && cb(&I)) sat = true; // checking any
-		else if (all && !cb(&I)) sat = false; // checking all
+	void visit (const BasicBlock* BB) {
+		for (auto it = BB->begin(); it != BB->end(); ++it) {
+			if (!all && cb(&*it)) sat = true; // checking any
+			else if (all && !cb(&*it)) sat = false; // checking all
+		}
 	}
 
-	bool operator() (BasicBlock* BB) {
+	bool operator() (const BasicBlock* BB) {
 		reset();
 		visit(BB);
 		return check();
 	}
 };
 
-static bool IcallsFunc (const Instruction* I, const Function* F) {
+static bool IcallsFuncByName (const Instruction* I, const StringRef Name) {
 	if (!isa<CallInst> (I)) return false;
 	
-	return (cast<CallInst>(I)->getCalledFunction() == F);
+	return (cast<CallInst>(I)->getCalledFunction()->getName() == Name);
 }
 
 static bool IisAtomic (const Instruction* I) {
@@ -46,8 +50,12 @@ static bool IisAtomic (const Instruction* I) {
 }
 	
 BBClassifier atprop_iset[] = {
-	BoolCallbackVisitor(IisAtomic)
+	BoolCallbackVisitor(IisAtomic),
+	BoolCallbackVisitor([](const Instruction* I)
+		{return IcallsFuncByName(I, "pthread_mutex_lock");}),
+	BoolCallbackVisitor([](const Instruction* I)
+		{return IcallsFuncByName(I, "pthread_mutex_unlock");})
 };
-#define ATPROP_ISET_SIZE 1
+#define ATPROP_ISET_SIZE 3
 
 }

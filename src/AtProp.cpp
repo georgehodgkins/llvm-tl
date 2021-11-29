@@ -12,7 +12,7 @@ AtProp::AtProp (BBClassifier& func) : cache(), decide(func) {
 	assert(func != nullptr);
 }
 
-bool AtProp::check (BasicBlock* BB) {
+bool AtProp::check (const BasicBlock* BB) {
 	const auto lookup = cache.find(BB);
 	if (lookup != cache.end()) return lookup->second;
 	
@@ -41,7 +41,7 @@ void AtPropSet::addProp(BBClassifier c) {
 	props.emplace_back(c);
 }
 
-std::vector<bool> AtPropSet::checkBlock (BasicBlock* BB) {
+std::vector<bool> AtPropSet::checkBlock (const BasicBlock* BB) {
 	std::vector<bool> checkSet (size());
 	auto lambda = [BB](AtProp& P) {return P.check(BB);};
 	std::transform(props.begin(), props.end(), checkSet.begin(), lambda);

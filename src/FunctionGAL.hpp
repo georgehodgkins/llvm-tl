@@ -12,6 +12,7 @@ class FunctionGAL : public its::GAL {
 	void addTransitions(BasicBlock*);	
 	void addTransitions(BasicBlock&);
 	DenseMap<const BasicBlock*, block_idx_t> blockIdx;
+	std::vector<const BasicBlock*> idxBlock;
 	block_idx_t cIdx;
 	block_idx_t indexBlock(const BasicBlock*);
 

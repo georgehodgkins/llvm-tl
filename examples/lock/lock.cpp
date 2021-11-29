@@ -5,14 +5,12 @@ int x = 0;
 
 int main (int argc, char** argv) {
 	pthread_mutex_init(&lock, NULL);
-	
-	pthread_mutex_lock(&lock);
-
 	if (argc == 0) {
 		x = 2;
-		pthread_mutex_unlock(&lock);
 		return 0;
 	}
+
+	pthread_mutex_lock(&lock);
 
 	if (argc < 0) {
 		x = -5;
@@ -22,8 +20,11 @@ int main (int argc, char** argv) {
 
 	if (argc > 0) {
 		x = 27;
-		pthread_mutex_unlock(&lock);
+		//pthread_mutex_unlock(&lock);
 		return 0;
 	}
+
+	pthread_mutex_unlock(&lock);
+	return 1;
 }
 

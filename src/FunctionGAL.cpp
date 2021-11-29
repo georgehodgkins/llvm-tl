@@ -4,6 +4,7 @@
 #include <sstream>
 #include <algorithm>
 #include <llvm/Support/Debug.h>
+#include <llvm/IR/Instructions.h>
 
 using namespace its;
 namespace llvm {
@@ -15,9 +16,30 @@ FunctionGAL::block_idx_t FunctionGAL::indexBlock (const BasicBlock* BB) {
 	auto emplit = blockIdx.try_emplace(BB, cIdx+1);
 	if (emplit.second) {
 		++cIdx;
+		idxBlock.push_back(BB);
+		assert(idxBlock.size() == cIdx+1);
 		LLVM_DEBUG(dbgs() << "\tIndexed BB " << (void*) BB << " to index " << (*emplit.first).second << '\n');
 	}
 	return (*emplit.first).second;
+}
+
+static inline std::vector<SyncAssignment::assign_t>
+encodeAtPropTransit(const std::vector<bool>& from, const std::vector<bool>& to) {
+	assert(from.size() == to.size());
+	std::vector<SyncAssignment::assign_t> assgn;
+	std::stringstream atp_label;
+	for (size_t i = 0; i < from.size(); ++i) {
+		if (from[i] != to[i]) {
+			atp_label << "atp" << i;
+			if (from[i]) { // true -> false
+				assgn.push_back(std::make_pair(Variable(atp_label.str()), 0));
+			} else { // false -> true
+				assgn.push_back(std::make_pair(Variable(atp_label.str()), 1));
+			}
+			atp_label.str("");
+		}
+	}
+	return assgn;
 }
 
 void FunctionGAL::addTransitions (BasicBlock* from) {
@@ -26,39 +48,43 @@ void FunctionGAL::addTransitions (BasicBlock* from) {
 	std::vector<bool> from_props = the_AtPropSet.checkBlock(from);
 	std::stringstream trans_label;
 	std::stringstream atp_label;
+
+	// condition for all transitions: state == starting block
+	BoolExpression guard = BoolExpressionFactory::createComparison(EQ, Variable("state"),
+		indexBlock(from));
+
 	for (unsigned i = 0; i < arnold->getNumSuccessors(); ++i) {	
 		BasicBlock* to = arnold->getSuccessor(i);
 		trans_label << from->getName().data() << "->" << to->getName().data();
 		GuardedAction trans (trans_label.str());
-		
-		// condition: state == starting block
-		BoolExpression guard = BoolExpressionFactory::createComparison(EQ, Variable("state"),
-			indexBlock(from));
 		trans.setGuard(guard);
-
-		// all the assignments are coalesced and performed as an atomic action
-		std::vector<SyncAssignment::assign_t> assgn;
-		// transition action: set state to destination block
-		assgn.push_back(std::make_pair(Variable("state"), indexBlock(to)));
+		
 		// atprop action(s): update any atomic propositions whose values change 
 		std::vector<bool> to_props = the_AtPropSet.checkBlock(to);
-		assert(to_props.size() == from_props.size());
-		for (size_t i = 0; i < to_props.size(); ++i) {
-	   		if (from_props[i] != to_props[i]) {
-				atp_label << "atp" << i;
-				if (from_props[i]) { // true -> false
-					assgn.push_back(std::make_pair(Variable(atp_label.str()), 0));
-				} else { // false -> true
-					assgn.push_back(std::make_pair(Variable(atp_label.str()), 1));
-				}
-				atp_label.str("");
-			}
-		}
+		auto assgn = encodeAtPropTransit(from_props, to_props);
+		// transition action: set state to destination block
+		assgn.push_back(std::make_pair(Variable("state"), indexBlock(to)));
+
+		// all the assignments are coalesced and performed as an atomic action
 		trans.getAction().add(SyncAssignment(assgn));
-		addTransition(trans);
-		
+		addTransition(trans);		
 		trans_label.str("");
 	}
+
+	// solver expects closed graphs, so returns loop back to the entry point
+	const static auto entry_props = the_AtPropSet.checkBlock(idxBlock[0]);
+	if (isa<ReturnInst>(from->getTerminator())) {
+		trans_label << from->getName().data() << " return loop";
+		GuardedAction trans (trans_label.str());
+		trans.setGuard(guard);
+		
+		auto assgn = encodeAtPropTransit(from_props, entry_props);
+		assgn.push_back(std::make_pair(Variable("state"), 0));
+
+		trans.getAction().add(SyncAssignment(assgn));
+		addTransition(trans);
+		trans_label.str("");
+	}		
 }
 
 void FunctionGAL::addTransitions (BasicBlock& from) {

@@ -15,6 +15,17 @@ namespace llvm {
 using namespace std;
 #define DEBUG_TYPE "llvm-tl"
 
+// testcases
+#ifdef TESTCASE_1
+const string TESTCASEPROP = "G atp0";
+const string TESTCASEFUNCS = "main;";
+#elif defined(TESTCASE_2)
+const string TESTCASEPROP = "G(atp1 -> F atp2)";
+const string TESTCASEFUNCS = "main;";
+#else
+#error "Select a testcase to compile for using -DTESTCASE_n."
+#endif
+
 /* -- legacy pass registration
 static RegisterPass<TLPropPass> X("llvm-tl", "LLVM *TL", true, true);
 char TLPropPass::ID = 0;
@@ -53,13 +64,6 @@ PreservedAnalyses TLPropPass::run(Module& M, ModuleAnalysisManager& MAM) {
 	runOnModule(M);
 	return PreservedAnalyses::all();
 }
-
-#ifdef TESTCASE_1
-const string TESTCASEPROP = "G atp0";
-const string TESTCASEFUNCS = "main;";
-#else
-#error "Select a testcase to compile for using -DTESTCASE_n."
-#endif
 
 Error TLPropPass::getCommandLine () {
 	//prop = spot::parse_infix_psl(TheTLProp.getValue());
@@ -137,7 +141,7 @@ Expected<bool> TLPropPass::checkFunction(Function* F) {
 	sogits::LTLChecker checker;
 	checker.setFormula(prop.f);
 	checker.setModel(&gal.model);
-	checker.setOptions("Cou99", false);
+	checker.setOptions("Cou99", true);
 	checker.setPlaceSyntax(true);
 	
 	bool sat;
