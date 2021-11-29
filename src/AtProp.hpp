@@ -8,7 +8,7 @@
 
 namespace llvm {
 
-typedef std::function<bool(const BasicBlock*)> BBClassifier;
+typedef std::function<bool(BasicBlock*)> BBClassifier;
 
 class AtPropSet;
 class AtProp {
@@ -20,7 +20,7 @@ class AtProp {
 	public:
 	AtProp(BBClassifier&);
 	AtProp() = delete;
-	bool check (const BasicBlock*);
+	bool check (BasicBlock*);
 };
 
 class AtPropSet {
@@ -33,7 +33,10 @@ class AtPropSet {
 	AtPropSet();
 	size_t size() const;
 	void addProp (BBClassifier);
-	std::vector<bool> checkBlock (const BasicBlock*);
+	AtProp& getProp(unsigned i) {
+		return props[i];
+	}
+	std::vector<bool> checkBlock (BasicBlock*);
 	bool checkFormula(spot::formula);
 };
 extern AtPropSet the_AtPropSet;

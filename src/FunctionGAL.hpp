@@ -2,17 +2,23 @@
 #include <llvm/IR/Function.h>
 #include <its/ITSModel.hh>
 #include <its/gal/GAL.hh>
+#include <string>
 
 namespace llvm {
 
 class FunctionGAL : public its::GAL {
 	private:
-	void addTransitions(const BasicBlock*);	
-	void addTransitions(const BasicBlock&);
+	typedef short block_idx_t;
+	void addTransitions(BasicBlock*);	
+	void addTransitions(BasicBlock&);
+	DenseMap<const BasicBlock*, block_idx_t> blockIdx;
+	block_idx_t cIdx;
+	block_idx_t indexBlock(const BasicBlock*);
 
 	public:
 	its::ITSModel model;
-	FunctionGAL(const Function* F);
+	std::string print() const;
+	FunctionGAL(Function* F);
 };
 
 } // namespace llvm
