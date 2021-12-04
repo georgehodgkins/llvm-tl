@@ -1,0 +1,55 @@
+diff --git a/src/Makefile.am b/src/Makefile.am
+index 0e0a483..43e91cc 100644
+--- a/src/Makefile.am
++++ b/src/Makefile.am
+@@ -1,4 +1,5 @@
+ noinst_PROGRAMS = its-ltl testite extractAP
++lib_LTLIBRARIES = libitsltl.la
+ 
+ if WITH_LIBDDD_PATH
+ LIBDDD_CPP=-I$(LIBDDD_ROOT)/include
+@@ -24,7 +25,7 @@ endif
+ 
+ if WITH_LIBEXPAT_PATH
+ LIBEXPAT_CPP=-I$(LIBEXPAT_ROOT)/include
+-LIBEXPAT_PATH=$(LIBEXPAT_ROOT)/lib/libexpat.a
++LIBEXPAT_PATH=$(LIBEXPAT_ROOT)/lib/x86_64-linux-gnu/libexpat.a
+ else
+ LIBEXPAT_LINK=-lexpat
+ endif
+@@ -42,7 +43,14 @@ endif
+ AM_CPPFLAGS = $(LIBSPOT_CPP) $(LIBITS_CPP) $(LIBDDD_CPP)  -g -O2 -Wall $(BOOST_CPPFLAGS) $(LIBEXPAT_CPP) $(ANTLRC_CPP)
+ AM_CXXFLAGS = -g -O2 -Wall
+ 
+-LDADDFLAGS = $(LIBITS_PATH) $(LIBSPOT_PATH) $(LIBSPOT_LINK) $(LIBDDD_PATH)  $(LIBEXPAT_PATH) $(LIBEXPAT_LINK) $(ANTLRC_PATH) $(ANTLRC_LINK)
++its_ltl_CPPFLAGS = $(AM_CPPFLAGS)
++testite_CPPFLAGS = $(AM_CPPFLAGS)
++
++LDADDFLAGS = $(LIBSPOT_PATH) $(LIBSPOT_LINK) $(LIBDDD_PATH) $(LIBDDD_LINK) $(LIBEXPAT_PATH) $(LIBEXPAT_LINK) $(ANTLRC_PATH) $(ANTLRC_LINK)
++
++LDADDFLAGS_2 = $(LIBITS_PATH) $(LIBITS_LINK) $(LDADDFLAGS)
++
++ARADDFLAGS = $(LIBSPOT_PATH) $(LIBEXPAT_PATH) $(LIBITS_PATH) $(LIBDDD_PATH)
+ 
+ MYHEADER =apiterator.hh \
+ 	bczCSD99.hh \
+@@ -82,12 +90,16 @@ MYSRC = apiterator.cpp \
+     dsogtgta.cpp
+ 
+ its_ltl_SOURCES = $(MYSRC) $(MYHEADER)
++its_ltl_LDADD = $(LDADDFLAGS_2)
++
++libitsltl_la_SOURCES = $(its_ltl_SOURCES)
++libitsltl_la_LIBADD = $(LDADDFLAGS)
++libitsltl_la_LDFLAGS = "-Wl,--whole-archive $(LIBITS_PATH) -Wl,--no-whole-archive"
+ 
+-its_ltl_LDADD = $(LDADDFLAGS)
+ # its_ltl_LDFLAGS =
+ 
+ testite_SOURCES = testIterator.cpp apiterator.hh apiterator.cpp
+-testite_LDADD =  $(LDADDFLAGS)
++testite_LDADD =  $(LDADDFLAGS_2)
+ 
+ extractAP_SOURCES = extractAP.cpp
+-extractAP_LDADD =  $(LDADDFLAGS)
++extractAP_LDADD =  $(LDADDFLAGS_2)

@@ -10,6 +10,9 @@ using namespace its;
 namespace llvm {
 #define DEBUG_TYPE "llvm-tl"
 
+// create the internal index for a block or return it if it already exists
+// we create these indices because libDDD uses small ints to store internal state
+// and so pointers cannot be used directly
 FunctionGAL::block_idx_t FunctionGAL::indexBlock (const BasicBlock* BB) {
 	assert(cIdx < std::numeric_limits<block_idx_t>::max() && "OK, now you really have to change \
 		the size (here and in libDDD)");
@@ -23,6 +26,7 @@ FunctionGAL::block_idx_t FunctionGAL::indexBlock (const BasicBlock* BB) {
 	return (*emplit.first).second;
 }
 
+// returns a vector of assignments for the changes in atprop values between two blocks
 static inline std::vector<SyncAssignment::assign_t>
 encodeAtPropTransit(const std::vector<bool>& from, const std::vector<bool>& to) {
 	assert(from.size() == to.size());
@@ -42,6 +46,7 @@ encodeAtPropTransit(const std::vector<bool>& from, const std::vector<bool>& to) 
 	return assgn;
 }
 
+// adds transitions from the input block to all its successors
 void FunctionGAL::addTransitions (BasicBlock* from) {
 	const Instruction* arnold = from->getTerminator();
 
@@ -91,13 +96,18 @@ void FunctionGAL::addTransitions (BasicBlock& from) {
 	addTransitions(&from);
 }
 
+// output constructed model as human-readable GAL
 std::string FunctionGAL::print() const {
-	// display constructed model
 	std::stringstream conv;
 	conv << *this;
 	return conv.str();
 }
 			
+/*
+ * Creates a model of the given function's reduced SSA graph in GAL. Encodes an integer variable
+ * "state" representing the current block and boolean variables "atp#" for the atprops
+ * in the global atprop set.
+ */
 FunctionGAL::FunctionGAL (Function* F) : GAL(F->getName().data()), cIdx(-1) {
 	// we encode the function as a GAL model
 	// see https://lip6.github.io/ITSTools-web/gal

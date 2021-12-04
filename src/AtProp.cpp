@@ -12,6 +12,7 @@ AtProp::AtProp (BBClassifier& func) : cache(), decide(func) {
 	assert(func != nullptr);
 }
 
+// check the atprop on a basicblock, or return a cached result
 bool AtProp::check (const BasicBlock* BB) {
 	const auto lookup = cache.find(BB);
 	if (lookup != cache.end()) return lookup->second;
@@ -23,6 +24,7 @@ bool AtProp::check (const BasicBlock* BB) {
 
 bool AtPropSet::instat = false;
 
+// initialize the atprop set from a list of classifiers
 AtPropSet::AtPropSet(BBClassifier* iset, size_t n) : props() {
    if (instat) throw std::runtime_error("AtPropSet is a singleton!");
    instat = true;
@@ -41,6 +43,7 @@ void AtPropSet::addProp(BBClassifier c) {
 	props.emplace_back(c);
 }
 
+// returns a vector of the results of checking all props on the given block
 std::vector<bool> AtPropSet::checkBlock (const BasicBlock* BB) {
 	std::vector<bool> checkSet (size());
 	auto lambda = [BB](AtProp& P) {return P.check(BB);};
@@ -48,7 +51,7 @@ std::vector<bool> AtPropSet::checkBlock (const BasicBlock* BB) {
 	return checkSet;
 }
 
-// DFS callback to ensure a formula uses only available atprops
+// passed to spot::formula::traverse to validate the formula's atprops
 bool AtPropSet::checkFormula (spot::formula f) {
 	if (!f.is(spot::op::ap)) return false; // not an atprop
 	

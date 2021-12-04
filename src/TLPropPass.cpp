@@ -39,6 +39,7 @@ static cl::opt<string> TheTLProp("tl-prop",
 cl::desc("LTL property to check"),
 cl::value_desc("LTL property in PSL syntax"), cl::ValueRequired);
 
+// registers the pass using the new pass manager
 extern "C" LLVM_ATTRIBUTE_WEAK
 PassPluginLibraryInfo llvmGetPassPluginInfo() {
 	return {LLVM_PLUGIN_API_VERSION, "LLVM-TL", LLVM_VERSION_STRING,
@@ -57,15 +58,17 @@ PassPluginLibraryInfo llvmGetPassPluginInfo() {
 }
 	
 const string allowedFuncChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890";
-
 static ExitOnError EOE ("LLVM-TL INIT ERROR\n");
 
+// wrapper to run our analysis in the new pass manager
 PreservedAnalyses TLPropPass::run(Module& M, ModuleAnalysisManager& MAM) {
 	runOnModule(M);
 	return PreservedAnalyses::all();
 }
 
+// parse+validate command-line (or hard-coded) inputs
 Error TLPropPass::getCommandLine () {
+	// ensure input is a valid PSL formula
 	//prop = spot::parse_infix_psl(TheTLProp.getValue());
 	prop = spot::parse_infix_psl(TESTCASEPROP);
 	stringstream err;
@@ -73,13 +76,15 @@ Error TLPropPass::getCommandLine () {
 		return createStringError(make_error_code(errc::invalid_argument), err.str());
 	}
 
-	// validate atprops in the formula
+	// ensure all atprops referenced exist
 	try {
 		prop.f.traverse([](spot::formula f){return the_AtPropSet.checkFormula(f);});
 	} catch (const invalid_argument& e) {
 		return createStringError(make_error_code(errc::invalid_argument), e.what());
 	}
 
+	// parse lists of functions to check, separated by semicolons
+	// must also end in a semicolon, because I am lazy
 	//const string& in_flist = FuncsOfInterest.getValue();
 	const string& in_flist = TESTCASEFUNCS;
 	size_t pos = in_flist.find_first_of(';');
@@ -102,6 +107,7 @@ TLPropPass::TLPropPass() {
 	EOE(getCommandLine());
 }
 
+// checks the property on any functions of interest found in this module
 bool TLPropPass::runOnModule(Module& M) {
 	SmallVector<Function*, 16> toCheck;
 	stringstream conv;
@@ -133,11 +139,13 @@ bool TLPropPass::runOnModule(Module& M) {
 	return false; // module not modified
 }
 
+// checks the property on one function
 Expected<bool> TLPropPass::checkFunction(Function* F) {
 	// build a GAL model of the function
 	FunctionGAL gal (F);
 	LLVM_DEBUG(dbgs() << "\t Built GAL model:\n\n" << gal.print() << "\n\n");
 
+	// init and run the checker
 	sogits::LTLChecker checker;
 	checker.setFormula(prop.f);
 	checker.setModel(&gal.model);
@@ -147,7 +155,9 @@ Expected<bool> TLPropPass::checkFunction(Function* F) {
 	bool sat;
 	try {
 		sat = checker.model_check(sogits::SLAP_FST);
-	} catch (char const* e) {
+	} catch (std::exception& e) {
+		return createStringError(make_error_code(errc::invalid_argument), e.what());
+	} catch (char const* e) { // damn academic software not properly using language features
 		return createStringError(make_error_code(errc::invalid_argument), e);
 	}
 
