@@ -28,7 +28,8 @@ LLVM takes a while; use of the Ninja buildsystem (rather than `make`) is strongl
 5. Finally, you can build the plugin by running `cmake src` or `cmake .` from within `src`, followed
 by `make` (no install). The buildsystem used is not important here (plugin built with Make is
 compatible with LLVM built with Ninja). As discussed in the report, the property and functions to
-check are statically defined; these definitions are at the top of TLPropPass.cpp. The list of
+check are statically defined; these definitions are at the top of
+[TLPropPass.cpp](src/TLPropPass.cpp). The list of
 function names must end in a semicolon. Different test cases are enabled using preprocessor macros
 set in `src/CMakeLists.txt`; test case 2 is enabled by default.
 
